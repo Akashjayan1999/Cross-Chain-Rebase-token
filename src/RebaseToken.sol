@@ -4,6 +4,7 @@ pragma solidity ^0.8.12;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 /*
 * @title RebaseToken
 * @author Akash Jayan
@@ -11,7 +12,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 * @notice The interest rate in the smart contract can only decrease 
 * @notice Each user will have their own interest rate that is the global interest rate at the time of depositing.
 */
-contract RebaseToken is ERC20,Ownable{
+contract RebaseToken is ERC20,Ownable,AccessControl{
 
 error RebaseToken__InterestRateCanOnlyDecrease(uint256 currentInterestRate, uint256 newInterestRate);
 
@@ -19,6 +20,7 @@ error RebaseToken__InterestRateCanOnlyDecrease(uint256 currentInterestRate, uint
     // State Variables
     /////////////////////
      uint256 private constant PRECISION_FACTOR = 1e18; // Used to handle fixed-point calculations
+     bytes32 private constant MINT_AND_BURN_ROLE = keccak256("MINT_AND_BURN_ROLE");
      mapping(address => uint256) private s_userInterestRate; // Keeps track of the interest rate of the user at the time they last deposited, bridged or were transferred tokens.
      mapping(address => uint256) private s_userLastUpdatedTimestamp; // the last time a user balance was updated to mint accrued interest.
      uint256 private s_interestRate = 5e10;
@@ -27,8 +29,12 @@ error RebaseToken__InterestRateCanOnlyDecrease(uint256 currentInterestRate, uint
     // Events
     /////////////////////
     event InterestRateSet(uint256 newInterestRate);
-         constructor() ERC20("Rebase Token", "RBT")Ownable(msg.sender) {
+         constructor() ERC20("Rebase Token", "RBT") Ownable(msg.sender) {
 
+    }
+
+    function grandMintAndBurnRole(address _account) external onlyOwner {
+        _grantRole(MINT_AND_BURN_ROLE, _account);
     }
 
 
@@ -65,7 +71,7 @@ error RebaseToken__InterestRateCanOnlyDecrease(uint256 currentInterestRate, uint
     }
 
 
-    function mint(address _to, uint256 _amount) public  {
+    function mint(address _to, uint256 _amount) external onlyRole(MINT_AND_BURN_ROLE) {
          _mintAccruedInterest(_to);
         // Sets the users interest rate to either their bridged value if they are bridging or to the current interest rate if they are depositing.
         s_userInterestRate[_to] = s_interestRate;
@@ -93,7 +99,7 @@ error RebaseToken__InterestRateCanOnlyDecrease(uint256 currentInterestRate, uint
     /// @param _from The address to burn the tokens from.
     /// @param _amount The number of tokens to be burned
     /// @dev this function decreases the total supply.
-    function burn(address _from, uint256 _amount) public  {
+    function burn(address _from, uint256 _amount) external onlyRole(MINT_AND_BURN_ROLE)  {
         if(_amount == type(uint256).max) {
             _amount = balanceOf(_from);
         }
