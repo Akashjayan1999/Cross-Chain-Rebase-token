@@ -23,7 +23,7 @@ error RebaseToken__InterestRateCanOnlyDecrease(uint256 currentInterestRate, uint
      bytes32 private constant MINT_AND_BURN_ROLE = keccak256("MINT_AND_BURN_ROLE");
      mapping(address => uint256) private s_userInterestRate; // Keeps track of the interest rate of the user at the time they last deposited, bridged or were transferred tokens.
      mapping(address => uint256) private s_userLastUpdatedTimestamp; // the last time a user balance was updated to mint accrued interest.
-     uint256 private s_interestRate = 5e10;
+     uint256 private s_interestRate = (5*PRECISION_FACTOR)/1e8; //5e10;
 
     /////////////////////
     // Events
