@@ -244,4 +244,9 @@ contract RebaseTokenTest is Test {
         uint256 principleAmountAfterWarp = rebaseToken.principalBalanceOf(user);
         assertEq(principleAmountAfterWarp, amount);
     }
+
+    function testGetRebaseTokenAddress() public view{
+        assertEq(vault.getRebaseToken(), address(rebaseToken));
+
+    }
 }
