@@ -71,10 +71,10 @@ error RebaseToken__InterestRateCanOnlyDecrease(uint256 currentInterestRate, uint
     }
 
 
-    function mint(address _to, uint256 _amount) external onlyRole(MINT_AND_BURN_ROLE) {
+    function mint(address _to, uint256 _amount, uint256 _userInterestRate) external onlyRole(MINT_AND_BURN_ROLE) {
          _mintAccruedInterest(_to);
         // Sets the users interest rate to either their bridged value if they are bridging or to the current interest rate if they are depositing.
-        s_userInterestRate[_to] = s_interestRate;
+        s_userInterestRate[_to] = _userInterestRate;
         _mint(_to, _amount);
     }
 

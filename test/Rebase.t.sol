@@ -122,7 +122,7 @@ contract RebaseTokenTest is Test {
         vm.startPrank(user);
         uint256 interestRate = rebaseToken.getInterestRate();
         vm.expectRevert();
-        rebaseToken.mint(user, SEND_VALUE);
+        rebaseToken.mint(user, SEND_VALUE,interestRate);
         vm.stopPrank();
     }
 
