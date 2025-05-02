@@ -10,6 +10,8 @@ import {CCIPLocalSimulatorFork, Register} from "@chainlink/local/src/ccip/CCIPLo
 import {IERC20} from "@ccip/src/v0.8/vendor/openzeppelin-solidity/v4.8.3/contracts/token/ERC20/IERC20.sol";
 import {RegistryModuleOwnerCustom} from "@ccip/src/v0.8/ccip/tokenAdminRegistry/RegistryModuleOwnerCustom.sol";
 import {TokenAdminRegistry} from "@ccip/src/v0.8/ccip/tokenAdminRegistry/TokenAdminRegistry.sol";
+import {TokenPool} from "@ccip/src/v0.8/ccip/pools/TokenPool.sol";
+import {RateLimiter} from "@ccip/src/v0.8/ccip/libraries/RateLimiter.sol";
 contract CrossChainTest is Test {
     address[] public allowlist = new address[](0);
     address public owner = makeAddr("owner");
@@ -74,6 +76,9 @@ contract CrossChainTest is Test {
         tokenAdminRegistrySepolia.acceptAdminRole(address(sourceRebaseToken));
          // Link token to pool in the token admin registry on Sepolia
         tokenAdminRegistrySepolia.setPool(address(sourceRebaseToken), address(sourcePool));
+         configureTokenPool(
+            sepoliaFork, sourcePool, destPool, IRebaseToken(address(destRebaseToken)), arbSepoliaNetworkDetails
+        );
         vm.stopPrank();
 
         //2. Deploy and configure on the destination chain: Arbitrum Sepolia
@@ -102,6 +107,34 @@ contract CrossChainTest is Test {
         tokenAdminRegistryarbSepolia.acceptAdminRole(address(destRebaseToken));
         // Link token to pool in the token admin registry on Arbitrum
         tokenAdminRegistryarbSepolia.setPool(address(destRebaseToken), address(destPool));
+       configureTokenPool(
+            arbSepoliaFork, destPool, sourcePool, IRebaseToken(address(sourceRebaseToken)), sepoliaNetworkDetails
+        );
+        vm.stopPrank();
+    }
+
+        function configureTokenPool(
+        uint256 fork,
+        TokenPool localPool,
+        TokenPool remotePool,
+        IRebaseToken remoteToken,
+        Register.NetworkDetails memory remoteNetworkDetails
+    ) public {
+        vm.selectFork(fork);
+        vm.startPrank(owner);
+        TokenPool.ChainUpdate[] memory chains = new TokenPool.ChainUpdate[](1);
+        bytes[] memory remotePoolAddresses = new bytes[](1);
+        remotePoolAddresses[0] = abi.encode(address(remotePool));
+        chains[0] = TokenPool.ChainUpdate({
+            remoteChainSelector: remoteNetworkDetails.chainSelector,
+            allowed:true,
+            remotePoolAddress: remotePoolAddresses[0],
+            remoteTokenAddress: abi.encode(address(remoteToken)),
+            outboundRateLimiterConfig: RateLimiter.Config({isEnabled: false, capacity: 0, rate: 0}),
+            inboundRateLimiterConfig: RateLimiter.Config({isEnabled: false, capacity: 0, rate: 0})
+        });
+       // uint64[] memory remoteChainSelectorsToRemove = new uint64[](0);
+        localPool.applyChainUpdates(chains);
         vm.stopPrank();
     }
 }
