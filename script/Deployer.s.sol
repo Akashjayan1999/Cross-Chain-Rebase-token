@@ -18,13 +18,31 @@ contract TokenAndPoolDeployer is Script {
         pool = new RebaseTokenPool(
             IERC20(address(token)), new address[](0), networkDetails.rmnProxyAddress, networkDetails.routerAddress
         );
-        token.grandMintAndBurnRole(address(pool));
+        
+        vm.stopBroadcast();
+    }
+}
+
+contract SetPermissions is Script {
+    function grantRole(address token, address pool) public {
+        vm.startBroadcast();
+        IRebaseToken(token).grantMintAndBurnRole(address(pool));
+        vm.stopBroadcast();
+    }
+
+    function setAdmin(address token, address pool) public {
+       
+        CCIPLocalSimulatorFork ccipLocalSimulatorFork = new CCIPLocalSimulatorFork();
+        Register.NetworkDetails memory networkDetails = ccipLocalSimulatorFork.getNetworkDetails(block.chainid);
+        vm.startBroadcast();
         RegistryModuleOwnerCustom(networkDetails.registryModuleOwnerCustomAddress).registerAdminViaOwner(address(token));
         TokenAdminRegistry(networkDetails.tokenAdminRegistryAddress).acceptAdminRole(address(token));
         TokenAdminRegistry(networkDetails.tokenAdminRegistryAddress).setPool(address(token), address(pool));
         vm.stopBroadcast();
     }
 }
+
+
 
 contract VaultDeployer is Script {
     function run(address _rebaseToken) public returns (Vault vault) {
